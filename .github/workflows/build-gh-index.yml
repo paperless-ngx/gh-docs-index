@@ -43,8 +43,8 @@ jobs:
           uv run scripts/build_github_index.py \
             --repo "paperless-ngx/paperless-ngx" \
             --out "out" \
-            --max 50 \
-            --full
+            $( [ "${{ github.event.inputs.full_rebuild }}" = "true" ] && echo "--full" ) \
+            $( [ "${{ github.event.inputs.max }}" != "0" ] && echo "--max ${{ github.event.inputs.max }}" )
           echo "---- out listing ----"
           ls -lah out
 
