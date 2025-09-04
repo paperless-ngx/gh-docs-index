@@ -15,6 +15,40 @@ from lunr import lunr
 API = "https://api.github.com"
 GRAPHQL = "https://api.github.com/graphql"
 
+def load_cached_docs(cache_dir: str) -> list[dict]:
+    p = os.path.join(cache_dir, "docs.json")
+    if os.path.exists(p):
+        try:
+            return json.load(open(p, encoding="utf-8"))
+        except Exception:
+            return []
+    return []
+
+def save_cached_docs(cache_dir: str, docs: list[dict]) -> None:
+    os.makedirs(cache_dir, exist_ok=True)
+    p = os.path.join(cache_dir, "docs.json")
+    with open(p, "w", encoding="utf-8") as f:
+        json.dump(docs, f, ensure_ascii=False)
+
+async def fetch_seed_from_ghpages() -> list[dict]:
+    """
+    Try to pull last published docs from gh-pages as a fallback.
+    Works in Actions because GITHUB_REPOSITORY is set.
+    """
+    repo_slug = os.environ.get("GITHUB_REPOSITORY")
+    if not repo_slug:
+        return []
+    # Use raw content to avoid HTML/gzip nuances
+    url = f"https://raw.githubusercontent.com/{repo_slug}/gh-pages/latest/github-docs.json"
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(url)
+            if r.status_code == 200:
+                return r.json()
+    except Exception:
+        pass
+    return []
+
 def excerpt(text: str, n: int = 400) -> str:
     text = re.sub(r"\s+", " ", (text or "")).strip()
     return text[:n]
@@ -174,23 +208,29 @@ async def run(repo: str, out: str, full: bool, max_items: int | None):
     state_path, state = load_state(cache_dir)
     since = None if full or not state.get("since") else state["since"]
 
+    # Seed docs_map with prior snapshot (cache first, then gh-pages)
+    prior_docs = load_cached_docs(cache_dir)
+    if not prior_docs:
+        prior_docs = await fetch_seed_from_ghpages()
+    prior_map = {d["id"]: d for d in prior_docs}
+
     # Crawl concurrently
     issues_task = asyncio.create_task(crawl_issues(repo, token, since, max_items))
     disc_task   = asyncio.create_task(crawl_discussions(repo, token, since, max_items))
-
     issues, discussions = await asyncio.gather(issues_task, disc_task)
 
-    # Merge + incremental carryover
-    out_dir = pathlib.Path(out)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    docs_path = out_dir / "github-docs.json"
-
+    # Merge new/updated over prior
     current = {d["id"]: d for d in (issues + discussions)}
-    all_docs_map = _merge_incremental(docs_path, current) if since else current
-    docs_list = list(all_docs_map.values())
+    merged_map = {**prior_map, **current} if since else current
 
     # Write outputs
+    out_dir = pathlib.Path(out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    docs_list = list(merged_map.values())
     build_and_write_outputs(out_dir, docs_list)
+
+    # Persist snapshot to cache for next run
+    save_cached_docs(cache_dir, docs_list)
 
     # Update state (pick newest updated_at)
     latest = max((d["updated_at"] for d in docs_list), default=since or datetime.now(timezone.utc).isoformat())
@@ -199,7 +239,7 @@ async def run(repo: str, out: str, full: bool, max_items: int | None):
     save_state(state_path, state)
 
     print(f"Indexed docs: {len(docs_list)}")
-    print(f"Wrote: {docs_path} and {out_dir / 'github-lunr-index.json'}")
+    print(f"Wrote: {out_dir / 'github-docs.json'} and {out_dir / 'github-lunr-index.json'}")
 
 def main():
     print(">> gh-docs-index: starting crawl")
