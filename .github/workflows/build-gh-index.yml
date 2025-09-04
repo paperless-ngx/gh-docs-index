@@ -32,16 +32,20 @@ jobs:
           path: .github-index-cache
           key: gh-index-cache
 
-      - name: Build index (uv run)
+      - name: Build index
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}   # fine-grained PAT with read Issues+Discussions
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
+          set -euo pipefail
+          mkdir -p out
+          echo "Token present? $([ -n "${GH_TOKEN-}" ] && echo yes || echo no)"
           uv run -m scripts.build_github_index \
             --repo "paperless-ngx/paperless-ngx" \
             --out "out" \
             $( [ "${{ github.event.inputs.full_rebuild }}" = "true" ] && echo "--full" ) \
             $( [ "${{ github.event.inputs.max }}" != "0" ] && echo "--max ${{ github.event.inputs.max }}" )
-          ls -lh out
+          echo "---- out listing ----"
+          ls -lah out
 
       - name: Upload artifact (for inspection)
         uses: actions/upload-artifact@v4
