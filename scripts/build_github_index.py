@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-import argparse, asyncio, json, os, re, sys, pathlib, time
+import argparse
+import asyncio
+import json
+import os
+import re
+import sys
+import pathlib
 from datetime import datetime, timezone
 from dateutil.parser import isoparse
 
@@ -196,6 +202,7 @@ async def run(repo: str, out: str, full: bool, max_items: int | None):
     print(f"Wrote: {docs_path} and {out_dir / 'github-lunr-index.json'}")
 
 def main():
+    print(">> gh-docs-index: starting crawl")
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", required=True, help="owner/name")
     ap.add_argument("--out", required=True, help="output dir (e.g. out/)")
@@ -203,3 +210,6 @@ def main():
     ap.add_argument("--max", type=int, default=None, help="limit total items (testing)")
     args = ap.parse_args()
     asyncio.run(run(args.repo, args.out, args.full, args.max))
+
+if __name__ == "__main__":
+    main()
