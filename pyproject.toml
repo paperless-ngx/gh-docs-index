@@ -1,0 +1,15 @@
+[project]
+name = "gh-docs-index"
+version = "0.1.0"
+description = "Nightly prebuilt Lunr index of GitHub issues/discussions for docs search"
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+  "httpx>=0.27.0",
+  "python-dateutil>=2.9.0",
+  "lunr>=0.6.2",
+]
+
+[project.scripts]
+build-github-index = "scripts.build_github_index:main"
