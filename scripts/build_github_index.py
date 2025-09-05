@@ -56,7 +56,7 @@ def load_state(cache_dir: str):
     p = os.path.join(cache_dir, "state.json")
     if os.path.exists(p):
         return p, json.load(open(p))
-    return p, {"last_run": None, "since": None}
+    return p, {"last_run": None}
 
 def save_state(p: str, state: dict):
     with open(p, "w") as f:
@@ -143,7 +143,7 @@ async def crawl_discussions(repo: str, token: str | None, since_iso: str | None,
             nodes = data["data"]["repository"]["discussions"]["nodes"]
 
             for d in nodes:
-                if since_iso and isoparse(d["updatedAt"]) < isoparse(since_iso):
+                if since_iso and isoparse(d["updatedAt"]) <= isoparse(since_iso):
                     has_next = False
                     break
                 out.append({
@@ -196,7 +196,8 @@ async def run(repo: str, out: str, full: bool, max_items: int | None):
 
     cache_dir = ".github-index-cache"
     state_path, state = load_state(cache_dir)
-    since = None if full or not state.get("since") else state["since"]
+    since = None if full or not state.get("last_run") else state["last_run"]
+    run_started_at = datetime.now(timezone.utc).isoformat()
 
     # Seed prior docs: cache first, then gh-pages fallback
     prior_docs = load_cached_docs(cache_dir)
@@ -226,9 +227,7 @@ async def run(repo: str, out: str, full: bool, max_items: int | None):
     save_cached_docs(cache_dir, docs_list)
 
     # Update state
-    latest = max((d["updated_at"] for d in docs_list), default=since or datetime.now(timezone.utc).isoformat())
-    state["since"] = latest
-    state["last_run"] = datetime.now(timezone.utc).isoformat()
+    state["last_run"] = run_started_at
     save_state(state_path, state)
 
     print(f"Indexed docs: {len(docs_list)}")
