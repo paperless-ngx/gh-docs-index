@@ -2,15 +2,6 @@ name: Build GitHub Search Index
 
 on:
   workflow_dispatch:
-    inputs:
-      full_rebuild:
-        description: 'Ignore cache and crawl everything'
-        required: false
-        default: 'false'
-      max:
-        description: 'Limit items for a quick test (e.g. 200)'
-        required: false
-        default: '0'
   schedule:
     - cron: "19 4 * * *"  # nightly 04:19 UTC
 
@@ -41,12 +32,10 @@ jobs:
           set -euo pipefail
           mkdir -p out
           echo "Token present? $([ -n "${GH_TOKEN-}" ] && echo yes || echo no)"
-          echo "Running indexer…"
+          echo "Running indexer (incremental)…"
           uv run scripts/build_github_index.py \
             --repo "paperless-ngx/paperless-ngx" \
-            --out "out" \
-            $( [ "${{ github.event.inputs.full_rebuild }}" = "true" ] && echo "--full" ) \
-            $( [ "${{ github.event.inputs.max }}" != "0" ] && echo "--max ${{ github.event.inputs.max }}" )
+            --out "out"
           echo "---- out listing ----"
           ls -lah out
 
