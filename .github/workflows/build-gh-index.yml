@@ -27,11 +27,13 @@ jobs:
         uses: astral-sh/setup-uv@v3
 
       - name: Restore crawl cache
-        uses: actions/cache@v4
+        id: crawl-cache-restore
+        uses: actions/cache/restore@v4
         with:
           path: .github-index-cache
-          key: gh-index-cache
-
+          key: gh-index-cache-${{ github.run_id }}
+          restore-keys: |
+            gh-index-cache-
       - name: Build index
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
@@ -65,3 +67,10 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: public
           keep_files: true
+
+      - name: Save crawl cache
+        if: ${{ success() }}
+        uses: actions/cache/save@v4
+        with:
+          path: .github-index-cache
+          key: gh-index-cache-${{ github.run_id }}
