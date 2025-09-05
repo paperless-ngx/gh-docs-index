@@ -42,8 +42,10 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
       - name: Install JS deps
-        run: npm ci || npm i
+        run: pnpm install
 
       - name: Build Lunr index
         run: node scripts/build_lunr_index.mjs
