@@ -10,7 +10,6 @@ from datetime import datetime, timezone
 from dateutil.parser import isoparse
 
 import httpx
-from lunr import lunr
 
 API = "https://api.github.com"
 GRAPHQL = "https://api.github.com/graphql"
@@ -168,25 +167,9 @@ def build_and_write_outputs(out_dir: pathlib.Path, docs_list: list[dict]):
     for d in docs_list:
         d["excerpt"] = excerpt(d.pop("body", ""), 400)
 
-    # Metadata file
     docs_path = out_dir / "github-docs.json"
     with open(docs_path, "w", encoding="utf-8") as f:
         json.dump(docs_list, f, ensure_ascii=False)
-
-    # Lunr index (title + excerpt + labels)
-    idx = lunr(
-        ref="id",
-        fields=("title", "excerpt", "labels"),
-        documents=[{
-            "id": d["id"],
-            "title": d["title"],
-            "excerpt": d["excerpt"],
-            "labels": " ".join(d.get("labels", [])),
-        } for d in docs_list],
-        languages=["en"],  # remove if you don't want stemming
-    )
-    with open(out_dir / "github-lunr-index.json", "w", encoding="utf-8") as f:
-        json.dump(idx.serialize(), f)
 
 async def run(repo: str, out: str, full: bool, max_items: int | None):
     token = os.environ.get("GH_TOKEN")
@@ -231,7 +214,7 @@ async def run(repo: str, out: str, full: bool, max_items: int | None):
     save_state(state_path, state)
 
     print(f"Indexed docs: {len(docs_list)}")
-    print(f"Wrote: {out_dir / 'github-docs.json'} and {out_dir / 'github-lunr-index.json'}")
+    print(f"Wrote: {out_dir / 'github-docs.json'}")
 
 def main():
     print(">> gh-docs-index: starting crawl")

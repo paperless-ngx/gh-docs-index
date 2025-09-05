@@ -37,7 +37,16 @@ jobs:
             --out "out"
           echo "---- out listing ----"
           ls -lah out
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
+      - name: Install JS deps
+        run: npm ci || npm i
+
+      - name: Build Lunr index
+        run: node scripts/build_lunr_index.mjs
       - name: Upload artifact (for inspection)
         uses: actions/upload-artifact@v4
         with:

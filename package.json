@@ -1,0 +1,8 @@
+{
+  "name": "gh-docs-index",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "lunr": "2.3.9"
+  }
+}
