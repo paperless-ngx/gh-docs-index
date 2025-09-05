@@ -31,7 +31,6 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p out
-          echo "Token present? $([ -n "${GH_TOKEN-}" ] && echo yes || echo no)"
           echo "Running indexer (incremental)…"
           uv run scripts/build_github_index.py \
             --repo "paperless-ngx/paperless-ngx" \
